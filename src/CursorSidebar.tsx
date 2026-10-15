@@ -73,6 +73,7 @@ import {
 } from "./collapse";
 import { useThreadSections } from "./useThreadSections";
 import { useSidebarView } from "./useSidebarView";
+import { useFirstLoad } from "./useFirstLoad";
 import type { cursorSidebarRpcContract } from "./server";
 import { SidebarViewMenuRoot, SidebarViewMenuTrigger, SidebarViewSyncNotice } from "./SidebarViewMenu";
 import {
@@ -113,6 +114,8 @@ import { ShowMoreButton } from "./ShowMoreButton";
  * list unmounting it instantaneously.
  */
 const COLLAPSED_ROW_EXIT_MS = 220;
+// Upper bound on hiding the list while its stored order and view load.
+const LIST_REVEAL_TIMEOUT_MS = 600;
 
 /**
  * Project-grouped thread list. BB's projects are the only containers, the
@@ -358,6 +361,9 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
   // which supported metadata a row shows.
   const sidebarView = useSidebarView();
   const view = sidebarView.view;
+  // Hold the list back until the stored project order and view have loaded,
+  // so it paints once in its final order instead of re-sorting on screen.
+  const listReady = useFirstLoad(threadOrders.loaded && sidebarView.loaded, LIST_REVEAL_TIMEOUT_MS);
   const familyRootOfId = useCallback(
     (threadId: string) =>
       familyRootId((id) => rawById.get(id)?.parentThreadId ?? null, threadId),
@@ -1227,6 +1233,8 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
       <div
         ref={listRef}
         data-fade-more={listHasMore ? "true" : undefined}
+        aria-busy={listReady ? undefined : true}
+        style={listReady ? undefined : { visibility: "hidden" }}
         onKeyDown={handleListKeyDown}
         className="min-h-0 flex-1 overflow-y-auto px-1.5 pt-2 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >

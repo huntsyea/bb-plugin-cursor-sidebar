@@ -18,6 +18,8 @@ export interface ThreadOrderStore {
   orderForScope: (scope: string) => readonly string[] | null;
   /** Persist a whole sibling scope, returning whether the write applied. */
   reorder: (scope: string, nextIds: readonly string[]) => Promise<boolean>;
+  /** Whether the stored orders have been read (or failed to read) once. */
+  loaded: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export function useThreadOrders(): ThreadOrderStore {
   );
   const pendingRef = useRef<Set<string>>(new Set());
   const requestSeq = useRef(0);
+  const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async () => {
     const seq = ++requestSeq.current;
@@ -50,6 +53,8 @@ export function useThreadOrders(): ThreadOrderStore {
       );
     } catch {
       // The list still renders in native order while the backend reloads.
+    } finally {
+      setLoaded(true);
     }
   }, [rpc]);
 
@@ -119,7 +124,7 @@ export function useThreadOrders(): ThreadOrderStore {
   );
 
   return useMemo(
-    () => ({ orderForScope, reorder }),
-    [orderForScope, reorder],
+    () => ({ orderForScope, reorder, loaded }),
+    [orderForScope, reorder, loaded],
   );
 }

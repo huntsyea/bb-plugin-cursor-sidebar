@@ -87,6 +87,8 @@ export interface SidebarViewStore {
   sync: SidebarViewSync;
   /** Re-attempt the unsaved change, or the failed read, once. */
   retry: () => void;
+  /** Whether the stored view has been read (or failed to read) at least once. */
+  loaded: boolean;
 }
 
 export interface SidebarViewSyncNotice {

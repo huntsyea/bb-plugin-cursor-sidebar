@@ -25,6 +25,8 @@ export interface SidebarViewController {
   isAvailable: () => boolean;
   /** The relationship between the shown view and the shared acknowledged value. */
   getSync: () => SidebarViewSync;
+  /** Whether a read has settled (succeeded or failed) at least once. */
+  hasLoaded: () => boolean;
   subscribe: (listener: () => void) => () => void;
   update: (patch: Partial<SidebarView>) => void;
   /** Re-attempt the unsaved change, or the failed read, once. */
@@ -42,6 +44,7 @@ export function createSidebarViewController(
   let writing = false;
   let failure: SidebarViewFailure | null = null;
   let storeReadable = true;
+  let loaded = false;
   /**
    * The mutation boundary. A local choice and a write settlement each move it,
    * and a read records it when it starts. A read is only eligible to update the
@@ -75,7 +78,8 @@ export function createSidebarViewController(
     const epoch = mutationEpoch;
     try {
       const stored = await transport.read();
-      if (generation !== readGeneration || epoch !== mutationEpoch) return;
+      loaded = true;
+      if (generation !== readGeneration || epoch !== mutationEpoch) { notify(); return; }
       const serverView =
         stored === null ? DEFAULT_SIDEBAR_VIEW : coerceSidebarView(stored);
       acknowledged = serverView;
@@ -87,7 +91,8 @@ export function createSidebarViewController(
       if (pending === null && !writing && failure !== "save") apply(serverView);
       else notify();
     } catch {
-      if (generation !== readGeneration || epoch !== mutationEpoch) return;
+      loaded = true;
+      if (generation !== readGeneration || epoch !== mutationEpoch) { notify(); return; }
       storeReadable = false;
       if (failure !== "save") failure = "read";
       notify();
@@ -138,6 +143,7 @@ export function createSidebarViewController(
     getAcknowledged: () => acknowledged,
     isAvailable: () => failure === null,
     getSync,
+    hasLoaded: () => loaded,
     subscribe: (listener) => {
       listeners.add(listener);
       return () => {

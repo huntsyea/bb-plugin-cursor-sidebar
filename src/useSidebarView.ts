@@ -39,5 +39,6 @@ export function useSidebarView(): SidebarViewStore {
     update: controller.update,
     sync: controller.getSync(),
     retry: controller.retry,
+    loaded: controller.hasLoaded(),
   };
 }
