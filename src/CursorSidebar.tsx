@@ -73,7 +73,7 @@ import {
 } from "./collapse";
 import { useThreadSections } from "./useThreadSections";
 import { useSidebarView } from "./useSidebarView";
-import { useFirstLoad } from "./useFirstLoad";
+import { useChangedSinceArmed, useFirstLoad } from "./useFirstLoad";
 import type { cursorSidebarRpcContract } from "./server";
 import { SidebarViewMenuRoot, SidebarViewMenuTrigger, SidebarViewSyncNotice } from "./SidebarViewMenu";
 import {
@@ -366,13 +366,7 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
   // of re-sorting (and sliding) on screen.
   const listReady = useFirstLoad(threadOrders.loaded && sidebarView.loaded, LIST_REVEAL_TIMEOUT_MS);
   // The grouping swap animation is for changing groupBy, not the first paint.
-  // The class must be present when the keyed list mounts: adding it to an
-  // already-mounted list would restart the animation. These refs only latch
-  // (null → value, false → true), so re-running a render is harmless.
-  const revealedGroupBy = useRef<string | null>(null);
-  if (listReady && revealedGroupBy.current === null) revealedGroupBy.current = view.groupBy;
-  const groupingChanged = useRef(false);
-  if (revealedGroupBy.current !== null && view.groupBy !== revealedGroupBy.current) groupingChanged.current = true;
+  const groupingChanged = useChangedSinceArmed(view.groupBy, listReady);
   const familyRootOfId = useCallback(
     (threadId: string) =>
       familyRootId((id) => rawById.get(id)?.parentThreadId ?? null, threadId),
@@ -1288,7 +1282,7 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
           <AnimatedList
             as="div"
             key={view.groupBy}
-            className={groupingChanged.current ? "cs-grouping-swap" : undefined}
+            className={groupingChanged ? "cs-grouping-swap" : undefined}
           >
             {liftedPins.length > 0 ? (
               <>

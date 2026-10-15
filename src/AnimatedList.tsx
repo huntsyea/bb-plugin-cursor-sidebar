@@ -39,9 +39,12 @@ export function AnimatedList({
   const controller = useRef<ReturnType<typeof autoAnimate> | null>(null);
   // auto-animate reacts to DOM mutations after the commit that made them, so
   // re-enable a frame later: the commit that applied the order must not slide.
+  // Lists that mount enabled (the common case) schedule nothing.
+  const disabled = useRef(false);
   useEffect(() => {
-    if (!enabled) { controller.current?.disable(); return; }
-    const frame = requestAnimationFrame(() => controller.current?.enable());
+    if (!enabled) { controller.current?.disable(); disabled.current = true; return; }
+    if (!disabled.current) return;
+    const frame = requestAnimationFrame(() => { controller.current?.enable(); disabled.current = false; });
     return () => cancelAnimationFrame(frame);
   }, [enabled]);
   const attach = useCallback((node: HTMLElement | null) => {
@@ -54,7 +57,7 @@ export function AnimatedList({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) return;
     controller.current = autoAnimate(node, { duration: MOVE_MS, easing: MOVE_EASING });
-    if (!enabledRef.current) controller.current.disable();
+    if (!enabledRef.current) { controller.current.disable(); disabled.current = true; }
   }, []);
   return <Tag ref={attach} className={className}>{children}</Tag>;
 }

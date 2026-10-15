@@ -78,8 +78,10 @@ export function createSidebarViewController(
     const epoch = mutationEpoch;
     try {
       const stored = await transport.read();
+      const firstLoad = !loaded;
       loaded = true;
-      if (generation !== readGeneration || epoch !== mutationEpoch) { notify(); return; }
+      // A stale read still counts as loaded; tell listeners only that once.
+      if (generation !== readGeneration || epoch !== mutationEpoch) { if (firstLoad) notify(); return; }
       const serverView =
         stored === null ? DEFAULT_SIDEBAR_VIEW : coerceSidebarView(stored);
       acknowledged = serverView;
@@ -91,8 +93,9 @@ export function createSidebarViewController(
       if (pending === null && !writing && failure !== "save") apply(serverView);
       else notify();
     } catch {
+      const firstLoad = !loaded;
       loaded = true;
-      if (generation !== readGeneration || epoch !== mutationEpoch) { notify(); return; }
+      if (generation !== readGeneration || epoch !== mutationEpoch) { if (firstLoad) notify(); return; }
       storeReadable = false;
       if (failure !== "save") failure = "read";
       notify();
