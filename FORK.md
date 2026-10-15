@@ -1,7 +1,8 @@
 # Fork notes
 
 Local fork of [wy3z/bb-plugin-cursor-sidebar](https://github.com/wy3z/bb-plugin-cursor-sidebar).
-`main` is our branch. The `upstream` remote is fetch-only (push is disabled).
+`main` is our branch, pushed to `origin` ([huntsyea/bb-plugin-cursor-sidebar](https://github.com/huntsyea/bb-plugin-cursor-sidebar)).
+The `upstream` remote is fetch-only (push is disabled).
 
 - **Base:** upstream `v0.2.1`
 - **Installed in BB from:** this directory (`bb plugin install <path>`)
@@ -22,5 +23,6 @@ Keep the plugin id `cursor-sidebar`, because the plugin's database (`~/.bb/plugi
 git merge vX.Y.Z                 # upstream releases are tags
 # resolve conflicts, keeping both upstream's change and ours above
 npx tsc --noEmit
+git push                         # to origin (our fork)
 npm run build && bb plugin reload cursor-sidebar
 ```
