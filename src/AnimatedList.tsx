@@ -1,4 +1,4 @@
-import { useCallback, useRef, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, type ReactNode } from "react";
 import { autoAnimate } from "./vendor/auto-animate/index.mjs";
 
 /** Inbox Sidebar's list animation and timing, reused for every sibling list.
@@ -15,6 +15,12 @@ import { autoAnimate } from "./vendor/auto-animate/index.mjs";
 const MOVE_MS = 240;
 const MOVE_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
 
+/**
+ * Whether lists may animate. The sidebar turns it off while its stored order
+ * loads, so the first arrangement appears in place instead of sliding there.
+ */
+export const ListAnimationContext = createContext(true);
+
 /** A list whose direct children slide when they are added, removed or
  * reordered. Only the immediate children of this node animate, so every list
  * needs its own: a `Drawer` body full of sections is not one. */
@@ -27,7 +33,17 @@ export function AnimatedList({
   children: ReactNode;
   className?: string;
 }) {
+  const enabled = useContext(ListAnimationContext);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
   const controller = useRef<ReturnType<typeof autoAnimate> | null>(null);
+  // auto-animate reacts to DOM mutations after the commit that made them, so
+  // re-enable a frame later: the commit that applied the order must not slide.
+  useEffect(() => {
+    if (!enabled) { controller.current?.disable(); return; }
+    const frame = requestAnimationFrame(() => controller.current?.enable());
+    return () => cancelAnimationFrame(frame);
+  }, [enabled]);
   const attach = useCallback((node: HTMLElement | null) => {
     controller.current?.destroy?.();
     controller.current?.disable();
@@ -38,6 +54,7 @@ export function AnimatedList({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) return;
     controller.current = autoAnimate(node, { duration: MOVE_MS, easing: MOVE_EASING });
+    if (!enabledRef.current) controller.current.disable();
   }, []);
   return <Tag ref={attach} className={className}>{children}</Tag>;
 }
