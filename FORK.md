@@ -5,6 +5,7 @@ Local fork of [wy3z/bb-plugin-cursor-sidebar](https://github.com/wy3z/bb-plugin-
 The `upstream` remote is fetch-only (push is disabled).
 
 - **Base:** original upstream `v0.2.1` history at `f85a292`, preserved as `fork-history/v0.2.1-original`
+- **Integrated release:** upstream `v0.2.2` at `e9a79c7`, merged with both parent histories intact for BBP-6.
 - **Installed in BB from:** this directory (`bb plugin install <path>`)
 
 ## Our changes
@@ -50,3 +51,28 @@ original annotation, including its internal `v0.2.1` name.
 Our `main` history and fork patches still descend from the original release.
 This tag correction did not merge upstream or build, install, or reload the
 plugin. Review future merges across the rewritten ancestry manually.
+
+## BBP-6 preparation (2026-10-18)
+
+Rollback commit: `cad09417609bd75248d18282eaf40f448e61bc63`.
+Prepared on `sync/BBP-6` in a separate worktree. The merge includes uploaded
+project icons and the icon CLI. It also joins the rewritten upstream history,
+including the native Add Project dialog and second-click project collapse.
+Those two behaviours were already present in the original v0.2.1 release tree.
+
+Conflicts were limited to release versions in `package.json` and
+`package-lock.json`, plus added imports in `src/CursorSidebar.tsx` and
+`src/server.ts`. Keep the upstream 0.2.2 versions and imports. Both fork
+behaviours above remain unchanged; the plugin ID remains `cursor-sidebar`.
+
+`npm ci`, `npm run typecheck`, and `npm run build` passed in the worktree.
+No test script is declared. Typecheck matches the October 18 baseline; the
+baseline did not run a build. BB 0.46.1 satisfies `engines.bb >=0.42` and
+its SDK 0.6.49 satisfies `engines.bbPluginSdk >=0.4.47`. The development SDK
+pin remains 0.4.47; the build warns about this difference and stamps SDK
+0.6.49 in both artifact manifests. Runtime behaviour is not yet verified.
+
+No install or reload is part of this preparation. After Hunter approves,
+verify that main can fast-forward to the reviewed branch, fast-forward main,
+build in the main checkout, then reload under Warden's protocol. Until then,
+keep the main checkout and its build output untouched.
