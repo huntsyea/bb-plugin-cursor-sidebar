@@ -8,13 +8,20 @@
 import type {
   PluginSidebarThread,
   PluginSidebarThreadIndicator,
+  PluginThreadActionTarget,
 } from "@get-bb/plugin-sdk/app";
 
-interface DisplayThread extends PluginSidebarThread {
-  displayTitle?: string;
+// Sidebar environment metadata can exist before its id is available.
+export function threadActionTarget(thread: PluginSidebarThread): PluginThreadActionTarget {
+  return {
+    ...thread,
+    environment: thread.environment?.id
+      ? { id: thread.environment.id, path: thread.environment.path }
+      : null,
+  };
 }
 
-export function threadDisplayTitle(thread: DisplayThread): string {
+export function threadDisplayTitle(thread: PluginSidebarThread): string {
   return thread.displayTitle ?? threadEditableTitle(thread);
 }
 
@@ -32,7 +39,7 @@ export function threadEditableTitle(thread: PluginSidebarThread): string {
  */
 export function resolveThreadDisplayTitles(
   threads: readonly PluginSidebarThread[],
-): DisplayThread[] {
+): PluginSidebarThread[] {
   const byId = new Map(threads.map((thread) => [thread.id, thread]));
   return threads.map((thread) => ({
     ...thread,

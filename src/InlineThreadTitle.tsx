@@ -6,7 +6,7 @@ import {
   type PointerEventHandler,
 } from "react";
 import {
-  experimental_useSidebarThreadActions as useSidebarThreadActions,
+  useSdk,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,7 @@ export function InlineThreadTitle({
   onClick?: MouseEventHandler<HTMLElement>;
   onPointerDown?: PointerEventHandler<HTMLElement>;
 }) {
-  const actions = useSidebarThreadActions();
+  const sdk = useSdk();
   const title = threadDisplayTitle(thread);
   const editableTitle = threadEditableTitle(thread);
   const [draft, setDraft] = useState(editableTitle);
@@ -81,7 +81,7 @@ export function InlineThreadTitle({
     onEditingChange(false);
     const next = draft.trim();
     if (save && next && next !== editableTitle) {
-      void actions.rename(thread.id, next);
+      void sdk.threads.update({ threadId: thread.id, title: next });
     }
   };
   return (

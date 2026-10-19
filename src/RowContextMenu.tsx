@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { experimental_useSidebarThreadActions as useSidebarThreadActions, type PluginSidebarThread } from "@get-bb/plugin-sdk/app";
+import { experimental_useThreadActions as useThreadActions, useBbNavigate, type PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { SidebarActions, type SidebarAction } from "./SidebarActions";
-import { threadDisplayTitle } from "./inbox";
+import { threadActionTarget, threadDisplayTitle } from "./inbox";
 import { pinActionLabel } from "./pin-scope";
 import type { RowSwipeBinding } from "./useRowGesture";
 
@@ -31,21 +31,29 @@ export function RowContextMenu({
   /** Touch long-press pick-up for a reorder drag; true means it took over. */
   onReorderStart?: (pointerId: number, clientX: number, clientY: number) => boolean;
 }) {
-  const native = useSidebarThreadActions();
+  const navigate = useBbNavigate();
+  const native = useThreadActions(threadActionTarget(thread), {
+    keys: ["bb--core/rename", "bb--core/read", "bb--core/archive", "bb--core/delete"],
+    requestRename: onRename,
+  });
+  const rename = native.find((entry) => entry.key === "bb--core/rename")?.action;
+  const read = native.find((entry) => entry.key === "bb--core/read")?.action;
+  const archive = native.find((entry) => entry.key === "bb--core/archive")?.action;
+  const deleteThread = native.find((entry) => entry.key === "bb--core/delete")?.action;
   // Native order (Open, Rename / read + pin / Archive, Delete) with the
   // family-scoped extras alongside their native cousins. Everything else is a
   // plain native call kept for parity.
   const actions: SidebarAction[] = [];
-  actions.push({ label: "Open in split", run: () => { native.open(thread.id, { split: true }); onOpen?.(); } });
-  if (onRename) actions.push({ label: "Rename", run: onRename });
+  actions.push({ label: "Open in split", run: () => { navigate.toThread(thread.id, { split: true }); onOpen?.(); } });
+  if (onRename && rename) actions.push({ label: "Rename", run: () => void rename.run() });
   if (onToggleChildren) actions.push({ label: expanded ? "Collapse children" : "Expand children", run: onToggleChildren });
-  actions.push({ label: thread.isUnread ? "Mark read" : "Mark unread", run: () => void native.setRead(thread.id, thread.isUnread), separatorBefore: true });
+  actions.push({ label: thread.isUnread ? "Mark read" : "Mark unread", run: () => void read?.run(), separatorBefore: true });
   if (onTogglePin) {
     actions.push({ label: pinActionLabel(isPinned ?? false), run: onTogglePin });
   }
   if (onRemoveFromFolder) actions.push({ label: "Remove family from folder", run: onRemoveFromFolder });
-  actions.push({ label: "Archive", run: () => native.archive(thread.id), separatorBefore: true });
-  actions.push({ label: "Delete", run: () => native.requestDelete(thread.id), destructive: true });
+  actions.push({ label: "Archive", run: () => void archive?.run(), separatorBefore: true });
+  actions.push({ label: "Delete", run: () => void deleteThread?.run(), destructive: true });
   // Pin towards the end of the row, archive the other way: pinning is
   // reversible and worth keeping, archiving takes the row away.
   const swipe: RowSwipeBinding | undefined = swipeDisabled
@@ -64,7 +72,7 @@ export function RowContextMenu({
           label: "Archive",
           icon: "Archive",
           destructive: true,
-          run: () => native.archive(thread.id),
+          run: () => void archive?.run(),
         },
       };
   // No hold action: on touch a hold opens this menu, and the menu carries the

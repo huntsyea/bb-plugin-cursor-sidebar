@@ -139,3 +139,116 @@ and removals match the prior fork patch. Main remains clean at the rollback
 SHA and all seven dist artifacts have unchanged hashes. Live behavior,
 including action menus and confirmation, remains unverified until an approved
 reload. The worktree is removed after pushing; the branch is retained.
+
+
+## BBP-22 SDK migration (2026-10-19)
+
+This section supersedes the BBP-21 SDK deferral above. `sync/BBP-22`, based on
+`origin/sync/BBP-21` at `80d1193`, is the combined v0.2.3 and SDK migration
+reload candidate. Rollback remains `2f996e8142d0cf4a3d9cca3fd767da2a468fc3ae`.
+
+### Live runtime finding (read-only)
+
+The installed main bundle uses `globalThis.__bbPluginRuntime.pluginSdkApp`;
+it does not bundle the SDK implementation. In installed BB 0.46.1,
+`app/dist/assets/plugin-frontend-DcgNBrkv.js` exports
+`experimental_useSidebarThreadActions: on` and installs that export object
+as `pluginSdkApp`. Its import resolves to `AQ` in `index-DLL4t6p_.js`.
+`AQ` still implements open, openNewThread, setPinned, setRead, rename,
+archive, and requestDelete. Thus the live plugin receives the old hook,
+even though SDK 0.6.49 declarations no longer expose it. The plugin reports
+running with zero handler errors; `bb plugin logs cursor-sidebar` returned
+no entries. This establishes runtime API availability, not an interaction
+test. No live UI was used. Priority stays medium; no urgent alert was needed.
+
+Fetched upstream and inspected its remote branches and recent commits.
+Main remains `a799844` (v0.2.3); none of the fetched upstream branches uses
+`experimental_useThreadActions`. There was no upstream migration to reuse.
+
+### Action migration
+
+| Behavior | SDK 0.6.49 implementation |
+|---|---|
+| Open row, parent link, modifier-click split, menu split | `useBbNavigate().toThread`, preserving split options and navigation callbacks. |
+| New personal/project chat | `toCompose`, preserving explicit project selection and prompt focus. |
+| Pin/unpin family and unpin during folder moves | `useSdk().threads.pin/unpin`; keep the existing write plan, unchanged-state check, and partial-failure reporting. |
+| Read/unread row | Bound `bb--core/read` action. Bulk mark-read uses `threads.markRead` and keeps per-thread failure reporting. |
+| Rename | Bound `bb--core/rename` starts the existing inline editor through `requestRename`; saving uses `threads.update`. Double-click, Enter, blur, Escape, and trim rules remain. |
+| Archive menu, hover control, swipe | Bound `bb--core/archive`, preserving host child confirmation, pane cleanup, and Undo. |
+| Delete menu | Bound `bb--core/delete`, preserving the host confirmation flow. No direct delete call. |
+
+The development SDK is pinned to 0.6.49. The minimum SDK engine is also
+0.6.49, so an older host cannot accept this candidate based on the former
+0.4.47 range. Removed the optional displayTitle override; use the required
+SDK field while retaining local mention expansion and workspace labels.
+A shared pure target conversion handles sidebar environments with null ids.
+It avoids duplicate conversion code and unsafe type assertions. Navigation,
+writes, and lifecycle actions stay with their existing host responsibilities;
+no replacement action framework or extra UI is added (KISS, DRY, YAGNI).
+
+All six separate first-paint/animation patch files match BBP-21 unchanged.
+CursorSidebar changes only action imports, calls, and hook dependencies;
+its readiness gate, 600 ms bound, aria-busy state, deferred row animation,
+and grouping-change entrance behavior remain intact. Plugin id is unchanged.
+
+### Validation and manual checks after the approved reload
+
+`npm ci`, `npm run typecheck`, and `npm run build` passed. Audit found zero
+vulnerabilities. There is no SDK mismatch warning. Remaining tooling warnings
+are Node module.register deprecation, deprecated prebuild-install, and
+better-sqlite3 install-script allowScripts coverage. No test suite exists;
+no automated interaction tests ran. Build manifests identify cursor-sidebar
+0.2.3 and SDK 0.6.49. The checks below are pending, not verified outcomes.
+
+1. **Open:** click and keyboard-open a row; open a detached parent link.
+   Cmd/Ctrl-click and menu Open in split must open or focus the correct pane.
+   Check compact layout and sidebar dismissal through onNavigate.
+2. **New thread:** use Today +, a project header +, and the project picker.
+   Verify the intended personal/project selection, focused prompt, and default
+   unpinned placement outside folders, even after using a different project.
+3. **Pin:** use hover, menu, and swipe to pin/unpin a single thread and a family.
+   Pinning must lift the family root; unpinning must clear pinned descendants.
+   Move a pinned family to a folder and check its unpin behavior. On a failed
+   write, verify partial-failure reporting and no false success message.
+4. **Read:** toggle read/unread in the row menu and verify indicators and menu
+   labels. Mark all read must affect only the eligible ordinary threads.
+   On a failed write, verify the reported successful/failed counts.
+5. **Rename:** use menu Rename and desktop double-click. Check editor focus,
+   Enter and blur save once, Escape cancels, and empty/unchanged input does not
+   save. A realtime title update must not replace an active draft. Check
+   fallback titles, thread mentions, and workspace display names separately
+   from the persisted editable title.
+6. **Archive:** use menu, hover button, and swipe on disposable single threads
+   and parents with children. Check the host child decision, cancel, removal,
+   active route/split cleanup, and Undo restoration. Verify the dialog remains
+   usable after the custom menu closes, including on touch.
+7. **Delete:** on disposable single threads and parents, open Delete from the
+   menu. Nothing must disappear before confirmation; cancel must preserve
+   data. Confirm only on disposable fixtures and check the host child options,
+   final removal, and route/pane cleanup. Check compact/touch confirmation.
+8. **Menu access:** compare right-click, Actions button, Shift+F10, and touch
+   long-press. Keep the same action order, separators, family/folder actions,
+   child expand/collapse behavior, and drag/swipe interaction.
+9. **v0.2.3 and fork patches:** check workspace anchor nesting/names with and
+   without Workspaces, native parents, and shared-worktree grouping. Verify
+   late workspace metadata does not cause unwanted animation. With saved
+   ordering and view settings, check stable first paint, bounded reveal,
+   aria-busy clearing, no initial motion, later reorder motion, and entrance
+   only when groupBy changes. Check cold load and reconnect.
+10. **Host health:** verify cursor-sidebar is running, inspect plugin logs and
+    frontend errors, and confirm no missing-hook or SDK mismatch error.
+
+### Reload plan (not executed)
+
+This candidate replaces `sync/BBP-21`; ship v0.2.3 and the SDK migration in
+one reviewed reload. After Warden approval, verify clean main at `2f996e8`,
+verify it is an ancestor of the reviewed `sync/BBP-22` tip, fast-forward main
+to that tip, run `npm ci` and build in main, then reload cursor-sidebar under
+Warden protocol. Run the checks above. Do not change the install source.
+For rollback, restore `2f996e8`, run `npm ci` and build, then reload under the
+same protocol. The rollback build is expected to warn about its old SDK pin.
+
+Preparation leaves main, all seven dist artifact hashes, the output inventory,
+and the install source unchanged. No install or reload is performed. Push the
+branch, retain it for review, and remove only this task worktree after verifying
+all tracked changes are committed and the remote tip matches.

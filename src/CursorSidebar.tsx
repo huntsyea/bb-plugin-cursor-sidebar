@@ -10,7 +10,8 @@ import {
 } from "react";
 import { toast } from "sonner";
 import {
-  experimental_useSidebarThreadActions as useSidebarThreadActions,
+  useBbNavigate,
+  useSdk,
   experimental_useSidebarThreads as useSidebarThreads,
   useRpc,
   type PluginSidebarThread,
@@ -151,7 +152,15 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
   const threadOrders = useThreadOrders();
   const threadOrdersRef = useRef(threadOrders);
   threadOrdersRef.current = threadOrders;
-  const actions = useSidebarThreadActions();
+  const navigate = useBbNavigate();
+  const sdk = useSdk();
+  const setPinned = useCallback(async (threadId: string, pinned: boolean) => {
+    const thread = rawById.get(threadId);
+    if (!thread) throw new Error(`Unknown thread: ${threadId}`);
+    if ((thread.pinnedAt !== null) === pinned) return;
+    if (pinned) await sdk.threads.pin({ threadId });
+    else await sdk.threads.unpin({ threadId });
+  }, [rawById, sdk]);
   const rpc = useRpc<typeof cursorSidebarRpcContract>();
   const projectIcons = useProjectIcons();
 
@@ -164,21 +173,21 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
     [nativeProjects],
   );
   const onNewThread = useCallback(() => {
-    actions.openNewThread({
+    navigate.toCompose({
       ...(personalProjectId === null ? {} : { projectId: personalProjectId }),
       focusPrompt: true,
     });
     onNavigate();
-  }, [actions, onNavigate, personalProjectId]);
+  }, [navigate, onNavigate, personalProjectId]);
 
   const nativeChatProjects = useMemo(
     () => nativeProjects.filter((project) => !project.isPersonal).map((project) => ({ id: project.id, name: project.name })),
     [nativeProjects],
   );
   const openNativeProjectChat = useCallback((project: { id: string; name: string }) => {
-    actions.openNewThread({ projectId: project.id, focusPrompt: true });
+    navigate.toCompose({ projectId: project.id, focusPrompt: true });
     onNavigate();
-  }, [actions, onNavigate]);
+  }, [navigate, onNavigate]);
 
   // The list fades its bottom edge while rows remain below the fold, so the
   // last visible row dissolves instead of meeting the next section with a cut.
@@ -562,13 +571,13 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
     // a partial outcome is reported exactly, not papered over.
     if (sectionFailed.length === 0 && plan.writePin) {
       try {
-        await actions.setPinned(root, false);
+        await setPinned(root, false);
       } catch {
         pinFailed = true;
       }
     }
     return { sectionFailed, pinFailed, wasPinned };
-  }, [actions, familyOf, folderStore, knownFolderIds, homeSectionOf, rawById]);
+  }, [setPinned, familyOf, folderStore, knownFolderIds, homeSectionOf, rawById]);
   applyFolderMoveRef.current = moveFamilyToSection;
 
   /** Announce a filing outcome; returns the error text when it failed. */
@@ -621,7 +630,7 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
         pinnedMemberIds: [],
         pinned: true,
       });
-      for (const write of writes) await actions.setPinned(write.threadId, write.pinned);
+      for (const write of writes) await setPinned(write.threadId, write.pinned);
       return { failed: [] };
     }
     const writes = planPinWrites({
@@ -633,13 +642,13 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
     const failed: string[] = [];
     for (const write of writes) {
       try {
-        await actions.setPinned(write.threadId, write.pinned);
+        await setPinned(write.threadId, write.pinned);
       } catch {
         failed.push(write.threadId);
       }
     }
     return { failed };
-  }, [actions, familyOf, rawById]);
+  }, [setPinned, familyOf, rawById]);
 
   const togglePin = useCallback(async (threadId: string, pinned: boolean): Promise<void> => {
     const section = homeSectionOf(threadId);
@@ -996,7 +1005,7 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
     if (unreadOrdinary.length === 0) return;
     setMarkReadBusy(true);
     const ids = unreadOrdinary;
-    const results = await Promise.allSettled(ids.map((id) => actions.setRead(id, true)));
+    const results = await Promise.allSettled(ids.map((id) => sdk.threads.markRead({ threadId: id })));
     setMarkReadBusy(false);
     const failed = results.filter((result) => result.status === "rejected").length;
     if (failed > 0) {
@@ -1008,7 +1017,7 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
     const message = `${ids.length} conversation${ids.length === 1 ? "" : "s"} marked read.`;
     setAnnouncement(message);
     toast.success(message);
-  }, [actions, unreadOrdinary]);
+  }, [sdk, unreadOrdinary]);
 
   // Bulk collapse operates the existing per-client stores over the real
   // collapsible targets the current view renders: the top groups, the rendered
@@ -1186,7 +1195,7 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
         onNewThread={
           nativeId !== null && section.known
             ? () => {
-                actions.openNewThread({ projectId: nativeId, focusPrompt: true });
+                navigate.toCompose({ projectId: nativeId, focusPrompt: true });
                 onNavigate();
               }
             : undefined

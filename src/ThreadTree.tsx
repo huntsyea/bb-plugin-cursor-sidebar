@@ -11,7 +11,8 @@ import {
   Fragment,
 } from "react";
 import {
-  experimental_useSidebarThreadActions as useSidebarThreadActions,
+  experimental_useThreadActions as useThreadActions,
+  useBbNavigate,
   experimental_useSidebarThreadSplit as useSidebarThreadSplit,
   type PluginSidebarThread,
 } from "@get-bb/plugin-sdk/app";
@@ -52,7 +53,7 @@ import {
   pageGroupRows,
 } from "./conversations";
 import { ShowMoreButton } from "./ShowMoreButton";
-import { statusSourceForGroup, threadDisplayTitle } from "./inbox";
+import { statusSourceForGroup, threadActionTarget, threadDisplayTitle } from "./inbox";
 import { resolveRowStatus, type ThreadStatusKind } from "./status";
 
 /** Everything a row needs that is the same for every row in a section. */
@@ -755,7 +756,7 @@ function ThreadRow({
   activeRailLevels?: ReadonlySet<number> | undefined;
   activeElbow?: boolean;
 }) {
-  const actions = useSidebarThreadActions();
+  const navigate = useBbNavigate();
   const { splitProps, layout } = useSidebarThreadSplit(row.thread.id);
   const [isRenaming, setIsRenaming] = useState(false);
 
@@ -764,6 +765,8 @@ function ThreadRow({
   const scope = scopeOf(section, thread.id);
   const title = threadDisplayTitle(thread);
   const native = ctx.rawById.get(thread.id) ?? thread;
+  const actions = useThreadActions(threadActionTarget(native), { keys: ["bb--core/archive"] });
+  const archive = actions.find((entry) => entry.key === "bb--core/archive")?.action;
   const workspacePath = native.environment?.id ? ctx.workspacePaths.get(native.environment.id) : null;
   // A real workspace label is the environment's own name, else the last segment
   // of its resolved path. BB's internal personal workspaces use a raw thr_/env_
@@ -842,7 +845,7 @@ function ThreadRow({
     >,
   ) => {
     event.preventDefault();
-    actions.open(thread.id, { split: event.metaKey || event.ctrlKey });
+    navigate.toThread(thread.id, { split: event.metaKey || event.ctrlKey });
     ctx.onNavigate();
   };
 
@@ -879,7 +882,7 @@ function ThreadRow({
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            actions.open(detachedParent.id);
+            navigate.toThread(detachedParent.id);
             ctx.onNavigate();
           }}
           aria-label={`Parent thread: ${threadDisplayTitle(detachedParent)}`}
@@ -1134,7 +1137,7 @@ function ThreadRow({
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    void actions.archive(thread.id);
+                    void archive?.run();
                   }}
                   className="cs-row-action pointer-events-none flex size-5 items-center justify-center rounded text-sidebar-foreground/73 group-hover/row:pointer-events-auto group-focus-within/row:pointer-events-auto focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring"
                 >
