@@ -5,7 +5,7 @@ Local fork of [wy3z/bb-plugin-cursor-sidebar](https://github.com/wy3z/bb-plugin-
 The `upstream` remote is fetch-only (push is disabled).
 
 - **Base:** original upstream `v0.2.1` history at `f85a292`, preserved as `fork-history/v0.2.1-original`
-- **Integrated release:** upstream `v0.2.2` at `e9a79c7`, merged with both parent histories intact for BBP-6.
+- **Integrated release:** upstream `v0.2.3` at `a799844`, merged with both parent histories intact for BBP-21.
 - **Installed in BB from:** this directory (`bb plugin install <path>`)
 
 ## Our changes
@@ -76,3 +76,28 @@ No install or reload is part of this preparation. After Hunter approves,
 verify that main can fast-forward to the reviewed branch, fast-forward main,
 build in the main checkout, then reload under Warden's protocol. Until then,
 keep the main checkout and its build output untouched.
+
+## BBP-21 preparation (2026-10-19)
+
+Rollback commit: `2f996e8142d0cf4a3d9cca3fd767da2a468fc3ae`.
+Prepared on `sync/BBP-21` in an isolated worktree, with a normal two-parent
+merge of verified upstream tag `v0.2.3` (`a7998444cc5fc1d5a4a19d6cb9f3d1ebaf537dc6`).
+The merge had no conflicts. Upstream adds optional Workspaces integration:
+workspace chats nest under their anchor (named first chat, otherwise oldest),
+and the anchor shows the workspace name. Shared-worktree top-level chats also
+group when Workspaces is running. Native parent links remain unchanged.
+Without the Workspaces plugin, the integration leaves the list unchanged.
+
+The first-paint readiness and deferred-animation patches remain intact.
+Workspace metadata loads separately from the stored order/view readiness gate;
+check late nesting and animation after reload. No new abstraction or duplicate
+fork logic is added. The plugin ID remains `cursor-sidebar`.
+
+Preparation does not change main, its dist/output, or the install source, and
+does not reload the plugin. After Warden approval, verify clean main at the
+rollback commit and fast-forward eligibility, fast-forward main to the reviewed
+branch, run `npm ci`, build, then reload `cursor-sidebar` under Warden protocol.
+Verify running status, logs, workspace nesting/names with and without Workspaces,
+stored order/view first paint, deferred row animation, and grouping changes.
+If rollback is needed, restore the rollback commit, run `npm ci`, build and reload
+under the same approval protocol.
