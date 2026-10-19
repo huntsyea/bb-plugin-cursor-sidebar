@@ -101,3 +101,41 @@ Verify running status, logs, workspace nesting/names with and without Workspaces
 stored order/view first paint, deferred row animation, and grouping changes.
 If rollback is needed, restore the rollback commit, run `npm ci`, build and reload
 under the same approval protocol.
+
+### SDK bump deferred: breaking action API
+
+The separate SDK 0.6.49 bump was attempted, then withdrawn under the task's
+stop-if-risky condition. npm ci succeeded (105 packages, zero audit findings),
+but typecheck failed with seven diagnostics. SDK 0.6.49 removes
+experimental_useSidebarThreadActions, used by CursorSidebar,
+InlineThreadTitle, RowContextMenu, and ThreadTree. The replacement
+experimental_useThreadActions(thread, options) returns bound menu entries;
+it is not a compatible rename. The old hook handles navigation, creation,
+pinning/read state, rename, archive, and delete confirmation. Migrating these
+calls changes runtime behavior and needs a separate reviewed migration.
+The SDK also makes PluginSidebarThread.displayTitle required, conflicting
+with the local optional override in inbox.ts (three diagnostics).
+
+The development pin and lockfile stay at 0.4.47. There is no SDK bump commit,
+and the build's SDK mismatch warning remains. Do not treat this branch as
+completion of the requested combined release. Warden must resolve the SDK
+migration or explicitly accept an upstream-only release before reload.
+
+### Final validation
+
+With the original SDK pin restored, npm ci (99 packages, zero audit findings),
+npm run typecheck, and npm run build passed in the worktree. No test suite or
+test script exists; no automated behavior tests ran. The SDK pin warning and
+Node module.register deprecation warning remain. npm also reports deprecated
+prebuild-install and missing allowScripts coverage for better-sqlite3.
+A temporary npm cache was used because the default cache was not writable.
+
+BB 0.46.1 satisfies engines.bb >=0.42. Host SDK 0.6.49 satisfies
+engines.bbPluginSdk >=0.4.47. These ranges pass but do not prove compatibility
+of the removed experimental action API. Both generated manifests identify
+cursor-sidebar 0.2.3, BB 0.46.1, and SDK 0.6.49.
+Six fork patch files are byte-identical to main; CursorSidebar's fork additions
+and removals match the prior fork patch. Main remains clean at the rollback
+SHA and all seven dist artifacts have unchanged hashes. Live behavior,
+including action menus and confirmation, remains unverified until an approved
+reload. The worktree is removed after pushing; the branch is retained.
