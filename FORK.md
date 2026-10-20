@@ -5,7 +5,7 @@ Local fork of [wy3z/bb-plugin-cursor-sidebar](https://github.com/wy3z/bb-plugin-
 The `upstream` remote is fetch-only (push is disabled).
 
 - **Base:** original upstream `v0.2.1` history at `f85a292`, preserved as `fork-history/v0.2.1-original`
-- **Integrated release:** upstream `v0.2.3` at `a799844`, merged with both parent histories intact for BBP-21.
+- **Integrated release:** upstream `v0.2.4` at `b21b6cf`, merged with both parent histories intact for BBP-22.
 - **Installed in BB from:** this directory (`bb plugin install <path>`)
 
 ## Our changes
@@ -237,10 +237,16 @@ no automated interaction tests ran. Build manifests identify cursor-sidebar
    only when groupBy changes. Check cold load and reconnect.
 10. **Host health:** verify cursor-sidebar is running, inspect plugin logs and
     frontend errors, and confirm no missing-hook or SDK mismatch error.
+11. **v0.2.4 row alignment:** without Workspaces, check that thread dots align
+    under project icons and thread titles align with project names. Check
+    parent dots, hover chevrons, child rails, detached-parent links, and Show
+    more indentation. Check uploaded and default 16 px project icons and the
+    project header Plus icon. Repeat with nested children, compact/touch
+    layouts, and Workspaces when available.
 
 ### Reload plan (not executed)
 
-This candidate replaces `sync/BBP-21`; ship v0.2.3 and the SDK migration in
+This candidate replaces `sync/BBP-21`; ship v0.2.4 and the SDK migration in
 one reviewed reload. After Warden approval, verify clean main at `2f996e8`,
 verify it is an ancestor of the reviewed `sync/BBP-22` tip, fast-forward main
 to that tip, run `npm ci` and build in main, then reload cursor-sidebar under
@@ -252,3 +258,37 @@ Preparation leaves main, all seven dist artifact hashes, the output inventory,
 and the install source unchanged. No install or reload is performed. Push the
 branch, retain it for review, and remove only this task worktree after verifying
 all tracked changes are committed and the remote tip matches.
+
+## BBP-22 v0.2.4 follow-up (2026-10-20)
+
+The single reload candidate is now `sync/BBP-22`: upstream v0.2.4 plus the
+SDK 0.6.49 migration. Rollback remains `2f996e8`. This supersedes the earlier
+v0.2.3 candidate description. No reload is requested or performed.
+
+The local tag and upstream tag both resolve to
+`b21b6cf864aae481f39a47540611550cb30e0ee4`. Normal two-parent merge `0311c22`
+joins that release to migration commit `e54cd00`.
+Upstream commit `3f08147` aligns thread rows with project headings: row padding
+and rail origins move from 8 to 12 px, detached-parent and Show more labels
+move by 4 px, project icons become 16 px, and the project new-chat icon is Plus.
+These styles are unconditional; the changes apply without Workspaces.
+The installed plugin list has no Workspaces entry. This is source verification;
+the new layout has not been checked in the live UI.
+
+There were no conflicts. Git merged ThreadTree, CursorSidebar, and both
+package files automatically. The source diff against `e54cd00` contains only
+the upstream layout/icon changes. The migrated navigation and bound actions
+remain intact. The six separate first-paint/animation patch files are
+byte-identical to main; the readiness and animation code in CursorSidebar
+is unchanged. The SDK development pin and minimum engine remain 0.6.49.
+Keeping the existing layout and action mechanisms avoids extra abstractions
+and duplicate logic (KISS, DRY, YAGNI); host action responsibilities stay intact.
+
+`npm ci`, `npm run typecheck`, `npm run build`, and `git diff --check` pass.
+Audit reports zero vulnerabilities. Both build manifests identify plugin
+0.2.4, SDK 0.6.49, and BB 0.46.1. There is no SDK mismatch warning.
+Remaining warnings concern deprecated prebuild-install, better-sqlite3
+allowScripts coverage, and Node module.register deprecation.
+No test suite exists. The manual checks above remain pending an approved
+reload. Preparation keeps main at `2f996e8`, its dist/output unchanged,
+and the install source unchanged.
