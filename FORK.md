@@ -6,7 +6,15 @@ The `upstream` remote is fetch-only (push is disabled).
 
 - **Base:** original upstream `v0.2.1` history at `f85a292`, preserved as `fork-history/v0.2.1-original`
 - **Integrated release:** upstream `v0.2.4` at `b21b6cf`, merged with both parent histories intact for BBP-22.
-- **Installed in BB from:** this directory (`bb plugin install <path>`)
+- **Installed in BB from:** `/Users/huntsyea/Dev/bb-plugins/bb-plugin-cursor-sidebar`, on `main` at v0.2.2 as of 2026-10-20. The v0.2.4 candidate remains on `sync/BBP-22`; do not install from the preparation worktree.
+
+## Requirements — 2026-10-20
+
+The `sync/BBP-22` manifest requires BB `>=0.42` and Plugin SDK `>=0.6.49`.
+The README's BB 0.42 minimum still matches; its upstream Git install example
+does not select this fork. The installed `main` manifest still declares SDK
+`>=0.4.47`. These engine ranges are manifest requirements; the prepared
+candidate still needs the approved runtime checks below.
 
 ## Our changes
 
@@ -23,13 +31,16 @@ Before merging a release, compare `git rev-parse refs/tags/vX.Y.Z` with
 `git ls-remote upstream refs/tags/vX.Y.Z`. The tag object IDs must match.
 
 ```sh
-../sync-forks.sh                 # what upstream has that we don't
-git merge vX.Y.Z                 # upstream releases are tags
-# resolve conflicts, keeping both upstream's change and ours above
-npx tsc --noEmit
-git push                         # to origin (our fork)
-npm run build && bb plugin reload cursor-sidebar
+bash "/Users/huntsyea/Dev/bb-plugins/sync-forks.sh"
 ```
+
+The root [sync-forks.sh](/Users/huntsyea/Dev/bb-plugins/sync-forks.sh)
+fetches and reports upstream changes; it does not merge or deploy.
+Prepare the selected tag in an isolated `sync/<KEY>` worktree. Preserve the
+fork changes above, record the rollback commit, and validate the candidate
+there. Report conflicts, results, and engine/SDK compatibility to Warden.
+Follow the [Warden reload protocol](/Users/huntsyea/Dev/bb-plugins/docs/agents/warden-reload-protocol.md)
+for approval, fast-forward, deployment order, and runtime checks.
 
 ## v0.2.1 history correction (2026-10-18)
 
