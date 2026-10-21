@@ -6,6 +6,7 @@
   "scripts": {
     "build": "bb plugin build",
     "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test && bb plugin types --check",
     "test": "vitest run"
   },
   "engines": {
