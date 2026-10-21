@@ -40,6 +40,13 @@ export function InlineThreadTitle({
   const finished = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wasEditing = useRef(false);
+  const pendingClick = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelPendingClick = () => {
+    if (pendingClick.current !== null) clearTimeout(pendingClick.current);
+    pendingClick.current = null;
+  };
+  useEffect(() => cancelPendingClick, []);
 
   useEffect(() => {
     const entering = editing && !wasEditing.current;
@@ -47,6 +54,7 @@ export function InlineThreadTitle({
     // Seed the draft and take focus only on the transition into editing. A
     // realtime title echo mid-rename must not clobber what is being typed.
     if (!entering) return;
+    cancelPendingClick();
     setDraft(editableTitle);
     finished.current = false;
     // Commit-time autoFocus loses to the closing menu's focus restoration in
@@ -62,11 +70,27 @@ export function InlineThreadTitle({
           "pointer-events-auto relative z-10",
           className,
         )}
-        onClick={onClick}
+        onClick={(event) => {
+          event.preventDefault();
+          cancelPendingClick();
+          // Keyboard, split-open modifiers and touch have no rename gesture.
+          if (event.detail === 0 || event.metaKey || event.ctrlKey || matchMedia("(pointer: coarse)").matches) {
+            onClick?.(event);
+            return;
+          }
+          if (event.detail > 1) return;
+          // Let a second click claim rename before navigation can move focus
+          // to the composer and blur (save/close) the new editor.
+          pendingClick.current = setTimeout(() => {
+            pendingClick.current = null;
+            onClick?.(event);
+          }, 500);
+        }}
         onPointerDown={onPointerDown}
         onDoubleClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
+          cancelPendingClick();
           if (matchMedia("(pointer: coarse)").matches) return;
           onEditingChange(true);
         }}

@@ -321,3 +321,21 @@ The plugin does not own this dialog and cannot override its text through the
 SDK. Keep deletion with the host; do not implement a recursive plugin delete
 or a second confirmation dialog. BBP-27 requires a host fix. Evidence and
 post-reload verification belong on BBP-27 and BBP-26, not in a new runbook.
+
+
+## BBP-28: title click and rename
+
+Desktop title clicks wait 500 ms so a double-click can cancel navigation
+before the host composer takes focus. Keyboard activation, Ctrl/Cmd-click,
+and coarse-pointer clicks remain immediate. Unmount and menu rename cancel
+a pending title click. Other row click targets are unchanged. This keeps the
+change inside the title component without a second navigation implementation.
+Double-clicks slower than this window can still navigate; verify the chosen
+window against the user's pointer settings after reload.
+
+`npm test` runs the component regression suite with Vitest and jsdom. The SDK
+write boundary is stubbed; delayed composer focus reproduces BBP-26 without
+live thread writes. The test failed before the fix and passes afterward.
+Headless Chrome also verified the isolated real component, with stubbed SDK
+writes and navigation. Full host routing, split panes, drag suppression, and
+compact layout still need the approved post-reload checks on the issues.
