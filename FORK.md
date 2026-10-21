@@ -39,7 +39,7 @@ fetches and reports upstream changes; it does not merge or deploy.
 Prepare the selected tag in an isolated `sync/<KEY>` worktree. Preserve the
 fork changes above, record the rollback commit, and validate the candidate
 there. Report conflicts, results, and engine/SDK compatibility to Warden.
-Follow the [Warden reload protocol](/Users/huntsyea/Dev/bb-plugins/docs/agents/warden-reload-protocol.md)
+Follow the [Warden reload protocol (ADR-0001)](/Users/huntsyea/Dev/bb-plugins/docs/adr/0001-warden-reload-approval.md)
 for approval, fast-forward, deployment order, and runtime checks.
 
 ## v0.2.1 history correction (2026-10-18)
