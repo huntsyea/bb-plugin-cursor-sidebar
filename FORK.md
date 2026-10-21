@@ -303,3 +303,21 @@ allowScripts coverage, and Node module.register deprecation.
 No test suite exists. The manual checks above remain pending an approved
 reload. Preparation keeps main at `2f996e8`, its dist/output unchanged,
 and the install source unchanged.
+
+
+## BBP-27: host delete contract
+
+Both the pre-migration hook at `2f996e8` and the SDK action at `e54cd00`
+reach the same host delete provider. SDK 0.6.49 exposes no child-deletion
+option on `experimental_useThreadActions`. The host sends
+`childThreadsConfirmed` with a single thread ID. The installed host deletes that thread and its
+lifecycle-owned descendants (`lifecycle_owner_thread_id`), while the warning
+counts assigned children (`parent_thread_id`). The flag acknowledges the
+warning; it does not include independent assigned children in deletion.
+The host dialog promises child deletion, although BBP-26 observed a surviving
+child with its parent link cleared. Rolling back the plugin will not fix this.
+
+The plugin does not own this dialog and cannot override its text through the
+SDK. Keep deletion with the host; do not implement a recursive plugin delete
+or a second confirmation dialog. BBP-27 requires a host fix. Evidence and
+post-reload verification belong on BBP-27 and BBP-26, not in a new runbook.
