@@ -303,3 +303,24 @@ allowScripts coverage, and Node module.register deprecation.
 No test suite exists. The manual checks above remain pending an approved
 reload. Preparation keeps main at `2f996e8`, its dist/output unchanged,
 and the install source unchanged.
+
+## BBP-28 immediate navigation and inline rename
+
+The replacement candidate on `fix/BBP-28` starts from `df0a63b`, which is also
+its rollback point. It reuses the BBP-27 test harness and development dependencies
+through a partial cherry-pick of `09e16b8`; it does not include that candidate's
+500 ms navigation delay or the unrelated BBP-27 diagnosis.
+
+Title clicks navigate synchronously. An inactive-row double-click can consume
+one programmatic focus transfer to the host's follow-up composer, for at most
+600 ms from the navigation click. A new pointer or keyboard event ends this
+exception. Other blur targets, menu rename, suppressed navigation, selected-row
+rename and expired transitions retain normal save/cancel behavior. The host
+composer element identity is an integration dependency; verify it after host
+updates. The bounded exception deliberately does not retain focus indefinitely
+when route completion takes longer than 600 ms.
+
+This keeps navigation in ThreadTree and editing in InlineThreadTitle, with one
+boolean callback result to identify accepted navigation. No extra state manager
+or navigation timer is added. Unit and isolated browser evidence is attached to
+BBP-28. Preparation does not reload the plugin or change its install source.

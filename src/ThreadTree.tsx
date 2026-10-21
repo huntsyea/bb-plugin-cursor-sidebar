@@ -1083,15 +1083,20 @@ function ThreadRow({
           <InlineThreadTitle
             thread={thread}
             editing={isRenaming}
+            selected={isActive}
             onEditingChange={setIsRenaming}
             onPointerDown={handlePointerDown}
             onClick={(event) => {
               if (event.detail > 1) {
                 event.preventDefault();
-                return;
+                return false;
               }
-              if (ctx.consumeSuppressedClick(thread.id)) return;
+              if (ctx.consumeSuppressedClick(thread.id)) {
+                event.preventDefault();
+                return false;
+              }
               open(event);
+              return true;
             }}
             className={cn(
               "cs-thread-title w-full min-w-0 overflow-hidden whitespace-nowrap text-sm",

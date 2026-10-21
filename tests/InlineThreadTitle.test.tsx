@@ -15,18 +15,29 @@ const thread = { id: "inactive" } as Parameters<typeof InlineThreadTitle>[0]["th
 let container: HTMLDivElement;
 let root: Root;
 let coarse = false;
+let initiallySelected = false;
+let routeDelay = 400;
+let suppressed = false;
 const navigate = vi.fn();
 function Harness() {
   const [editing, setEditing] = useState(false);
+  const [selected, setSelected] = useState(initiallySelected);
   return <>
-    <InlineThreadTitle thread={thread} editing={editing} onEditingChange={setEditing}
+    <InlineThreadTitle thread={thread} selected={selected} editing={editing} onEditingChange={setEditing}
       onClick={(event) => {
-        if (event.detail > 1) return;
+        event.preventDefault();
+        if (event.detail > 1 || suppressed) return false;
         navigate({ metaKey: event.metaKey, ctrlKey: event.ctrlKey });
         // Model host route completion taking composer focus, as in BBP-26.
-        setTimeout(() => container.querySelector("textarea")?.focus(), 400);
+        if (!selected) setTimeout(() => {
+          setSelected(true);
+          container.querySelector<HTMLElement>("[contenteditable]")?.focus();
+        }, routeDelay);
+        return true;
       }} />
-    <textarea aria-label="Composer" />
+    <div id="thread-detail-follow-up-composer" contentEditable tabIndex={0} />
+    <button>Other control</button>
+    <button aria-label="Menu Rename" onClick={() => setEditing(true)}>Rename</button>
   </>;
 }
 const title = () => container.querySelector("span")!;
@@ -45,6 +56,9 @@ beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("matchMedia", () => ({ matches: coarse }));
   coarse = false;
+  initiallySelected = false;
+  routeDelay = 400;
+  suppressed = false;
   navigate.mockClear();
   update.mockReset();
   container = document.createElement("div");
@@ -59,21 +73,29 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test("inactive title double-click retains focused editor after route completion window", () => {
+function changeDraft(value = "Renamed") {
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(editor(), value);
+    editor()!.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+const settle = () => act(() => vi.advanceTimersByTime(1000));
+test("inactive double-click navigates immediately and retains focused editor after route autofocus", async () => {
   doubleClick();
-  expect(editor()).not.toBeNull();
-  act(() => vi.advanceTimersByTime(1000));
+  expect(navigate).toHaveBeenCalledTimes(1);
+  await act(async () => vi.advanceTimersByTime(1000));
   expect(editor()).not.toBeNull();
   expect(document.activeElement).toBe(editor());
-  expect(navigate).not.toHaveBeenCalled();
 });
-test("single title click opens once after the double-click window", () => {
+test("single click calls navigation synchronously without scheduling a navigation timer", () => {
+  const now = performance.now();
   click();
-  expect(navigate).not.toHaveBeenCalled();
-  act(() => vi.advanceTimersByTime(1000));
   expect(navigate).toHaveBeenCalledTimes(1);
+  expect(performance.now()).toBe(now);
+  // Only the harness's route-completion timer exists.
+  expect(vi.getTimerCount()).toBe(1);
 });
-test.each([{ metaKey: true }, { ctrlKey: true }])("modifier click stays immediate: %j", (keys) => {
+test.each([{ metaKey: true }, { ctrlKey: true }])("modifier click stays immediate: %j", keys => {
   click(1, keys);
   expect(navigate).toHaveBeenCalledWith({ metaKey: false, ctrlKey: false, ...keys });
 });
@@ -86,27 +108,87 @@ test("touch activation stays immediate", () => {
   click();
   expect(navigate).toHaveBeenCalledTimes(1);
 });
-test("unmount cancels a pending navigation", () => {
-  click();
-  act(() => root.render(<div />));
-  act(() => vi.advanceTimersByTime(1000));
-  expect(navigate).not.toHaveBeenCalled();
-});
-test("Escape cancels rename without saving or navigating", () => {
+test("real blur to another control commits during the guard window", () => {
   doubleClick();
+  changeDraft();
+  act(() => container.querySelector("button")!.focus());
+  expect(editor()).toBeNull();
+  expect(update).toHaveBeenCalledExactlyOnceWith({ threadId: "inactive", title: "Renamed" });
+});
+test("user pointer intent in composer ends the exception and commits", () => {
+  doubleClick();
+  changeDraft();
+  act(() => {
+    const composer = container.querySelector<HTMLElement>("[contenteditable]")!;
+    composer.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    composer.focus();
+  });
+  expect(editor()).toBeNull();
+  expect(update).toHaveBeenCalledTimes(1);
+});
+test("Tab ends the exception and commits", () => {
+  doubleClick();
+  changeDraft();
+  act(() => {
+    editor()!.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    container.querySelector<HTMLElement>("[contenteditable]")!.focus();
+  });
+  expect(update).toHaveBeenCalledTimes(1);
+});
+test("Escape cancels changed draft and delayed autofocus cannot reopen it", () => {
+  doubleClick();
+  changeDraft();
   act(() => editor()!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
-  act(() => vi.advanceTimersByTime(1000));
+  settle();
   expect(editor()).toBeNull();
   expect(update).not.toHaveBeenCalled();
-  expect(navigate).not.toHaveBeenCalled();
 });
+test("selected row double-click works without a focus exception", () => {
+  initiallySelected = true;
+  act(() => { root.unmount(); root = createRoot(container); root.render(<Harness />); });
+  doubleClick();
+  expect(document.activeElement).toBe(editor());
 
-test("a second click near the end of the window cancels navigation", () => {
-  click();
-  act(() => vi.advanceTimersByTime(450));
-  click(2);
-  act(() => title().dispatchEvent(new MouseEvent("dblclick", { bubbles: true, detail: 2 })));
-  act(() => vi.advanceTimersByTime(1000));
-  expect(editor()).not.toBeNull();
+  changeDraft();
+  act(() => container.querySelector<HTMLElement>("[contenteditable]")!.focus());
+  expect(update).toHaveBeenCalledTimes(1);
+});
+test("exception expires 600 ms after navigation, even if rename starts later", () => {
+  routeDelay = 700;
+  doubleClick();
+  changeDraft();
+  settle();
+  expect(editor()).toBeNull();
+  expect(update).toHaveBeenCalledTimes(1);
+});
+test("exception is consumed once; next programmatic composer blur commits", async () => {
+  doubleClick();
+  await act(async () => vi.advanceTimersByTime(300));
+  expect(document.activeElement).toBe(editor());
+  changeDraft();
+  act(() => container.querySelector<HTMLElement>("[contenteditable]")!.focus());
+  expect(update).toHaveBeenCalledTimes(1);
+});
+test("unmount during pending route focus does not recreate an editor", () => {
+  doubleClick();
+  act(() => root.render(<div />));
+  settle();
+  expect(editor()).toBeNull();
+  expect(update).not.toHaveBeenCalled();
+});
+test("suppressed click cannot arm the focus exception", () => {
+  suppressed = true;
+  doubleClick();
+  changeDraft();
+  act(() => container.querySelector<HTMLElement>("[contenteditable]")!.focus());
   expect(navigate).not.toHaveBeenCalled();
+  expect(update).toHaveBeenCalledTimes(1);
+});
+test("menu rename does not inherit a recent navigation exception", () => {
+  click();
+  act(() => container.querySelector<HTMLButtonElement>('[aria-label="Menu Rename"]')!.click());
+  expect(document.activeElement).toBe(editor());
+  changeDraft();
+  act(() => container.querySelector<HTMLElement>("[contenteditable]")!.focus());
+  expect(update).toHaveBeenCalledTimes(1);
 });
