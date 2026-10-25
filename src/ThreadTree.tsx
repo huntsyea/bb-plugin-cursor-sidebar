@@ -1077,7 +1077,7 @@ function ThreadRow({
             ) : null}
           </span>
 
-          {ctx.view.show.pr ? <PullRequestMark threadId={thread.id} /> : null}
+          {ctx.view.show.pr ? <PullRequestMark environmentId={native.environment?.id ?? null} /> : null}
 
           <div className={cn("pointer-events-none flex min-w-0 flex-1 flex-col items-start", secondary ? "gap-0 leading-none" : "gap-0")}>
           <InlineThreadTitle
