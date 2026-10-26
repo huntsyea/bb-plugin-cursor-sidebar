@@ -1129,19 +1129,22 @@ function ThreadRow({
                     <Icon name={rowPinned ? "PinOff" : "Pin"} className="size-3.5" />
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  aria-label="Archive"
-                  title="Archive"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    void archive?.run();
-                  }}
-                  className="cs-row-action pointer-events-none flex size-5 items-center justify-center rounded text-sidebar-foreground/73 group-hover/row:pointer-events-auto group-focus-within/row:pointer-events-auto focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring"
-                >
-                  <Icon name="Archive" className="size-3.5" />
-                </button>
+                {/* Only when the host offers archive and allows it here. */}
+                {archive && !archive.disabled ? (
+                  <button
+                    type="button"
+                    aria-label="Archive"
+                    title="Archive"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      void archive.run();
+                    }}
+                    className="cs-row-action pointer-events-none flex size-5 items-center justify-center rounded text-sidebar-foreground/73 group-hover/row:pointer-events-auto group-focus-within/row:pointer-events-auto focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring"
+                  >
+                    <Icon name="Archive" className="size-3.5" />
+                  </button>
+                ) : null}
               </span>
               {hasChildren ? (
                 <span

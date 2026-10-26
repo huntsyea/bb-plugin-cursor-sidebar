@@ -45,15 +45,16 @@ export function RowContextMenu({
   // plain native call kept for parity.
   const actions: SidebarAction[] = [];
   actions.push({ label: "Open in split", run: () => { navigate.toThread(thread.id, { split: true }); onOpen?.(); } });
-  if (onRename && rename) actions.push({ label: "Rename", run: () => void rename.run() });
+  // Host actions appear only when the host offers them, disabled when it says so.
+  if (onRename && rename) actions.push({ label: "Rename", run: () => void rename.run(), disabled: rename.disabled });
   if (onToggleChildren) actions.push({ label: expanded ? "Collapse children" : "Expand children", run: onToggleChildren });
-  actions.push({ label: thread.isUnread ? "Mark read" : "Mark unread", run: () => void read?.run(), separatorBefore: true });
+  if (read) actions.push({ label: thread.isUnread ? "Mark read" : "Mark unread", run: () => void read.run(), disabled: read.disabled, separatorBefore: true });
   if (onTogglePin) {
     actions.push({ label: pinActionLabel(isPinned ?? false), run: onTogglePin });
   }
   if (onRemoveFromFolder) actions.push({ label: "Remove family from folder", run: onRemoveFromFolder });
-  actions.push({ label: "Archive", run: () => void archive?.run(), separatorBefore: true });
-  actions.push({ label: "Delete", run: () => void deleteThread?.run(), destructive: true });
+  if (archive) actions.push({ label: "Archive", run: () => void archive.run(), disabled: archive.disabled, separatorBefore: true });
+  if (deleteThread) actions.push({ label: "Delete", run: () => void deleteThread.run(), disabled: deleteThread.disabled, destructive: true, separatorBefore: !archive });
   // Pin towards the end of the row, archive the other way: pinning is
   // reversible and worth keeping, archiving takes the row away.
   const swipe: RowSwipeBinding | undefined = swipeDisabled
@@ -68,12 +69,16 @@ export function RowContextMenu({
               },
             }
           : {}),
-        right: {
-          label: "Archive",
-          icon: "Archive",
-          destructive: true,
-          run: () => void archive?.run(),
-        },
+        ...(archive && !archive.disabled
+          ? {
+              right: {
+                label: "Archive",
+                icon: "Archive",
+                destructive: true,
+                run: () => void archive.run(),
+              },
+            }
+          : {}),
       };
   // No hold action: on touch a hold opens this menu, and the menu carries the
   // children toggle. A row with children used to spend its hold on expanding

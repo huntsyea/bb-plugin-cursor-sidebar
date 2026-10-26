@@ -11,7 +11,7 @@ import {
   type RowSwipeBinding,
 } from "./useRowGesture";
 
-export interface SidebarAction { label: string; run: () => void; destructive?: boolean; separatorBefore?: boolean }
+export interface SidebarAction { label: string; run: () => void; destructive?: boolean; separatorBefore?: boolean; disabled?: boolean | undefined }
 
 /** One context surface for right-click, keyboard, assistive technology and touch. */
 export function SidebarActions({ label, onHold, onReorderStart, actions, swipe, children }: {
@@ -90,8 +90,8 @@ export function SidebarActions({ label, onHold, onReorderStart, actions, swipe, 
       )}>
       {actions.flatMap(action => [
         ...(action.separatorBefore ? [<div key={`${action.label}:separator`} aria-hidden className="mx-2 my-1 h-px bg-border" />] : []),
-        <button key={action.label} type="button" onClick={() => { setOpen(false); action.run(); }}
-          className={`rounded px-2.5 py-1.5 text-left text-sm whitespace-nowrap outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-1 focus-visible:ring-ring max-md:py-2.5 pointer-coarse:py-2.5 ${action.destructive ? "text-destructive" : ""}`}>{action.label}</button>,
+        <button key={action.label} type="button" disabled={action.disabled} onClick={() => { setOpen(false); action.run(); }}
+          className={`rounded px-2.5 py-1.5 text-left text-sm whitespace-nowrap outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 max-md:py-2.5 pointer-coarse:py-2.5 ${action.destructive ? "text-destructive" : ""}`}>{action.label}</button>,
       ])}
     </Popover.Content></Popover.Portal>
   </Popover.Root>;
