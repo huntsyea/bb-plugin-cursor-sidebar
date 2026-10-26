@@ -20,8 +20,8 @@ candidate still needs the approved runtime checks below.
 
 | Change | Main files |
 |---|---|
-| The list paints once, in its final order. It stays hidden (layout kept, `aria-busy`) until the stored project order and SidebarView have loaded, for at most 600 ms. | `src/useFirstLoad.ts`; a `loaded` flag in `src/useThreadOrders.ts`, `src/sidebar-view-controller.ts`, `src/useSidebarView.ts`, `src/sidebar-view.ts`; `src/CursorSidebar.tsx` |
-| No motion on first paint: row animations (auto-animate) are off until a frame after the stored order applies, and the grouping-swap entrance only plays when `groupBy` changes. | `ListAnimationContext` in `src/AnimatedList.tsx`; `src/CursorSidebar.tsx` |
+| The list paints once, in its final order. It stays hidden (layout kept, `aria-busy`) until the stored project order and SidebarView have loaded, for at most 600 ms. | The List reveal module, `src/ListReveal.tsx` (BBP-51); a `loaded` flag in `src/useThreadOrders.ts`, `src/sidebar-view-controller.ts`, `src/useSidebarView.ts`, `src/sidebar-view.ts`; one `<ListReveal>` wrap (import, open, close) in `src/CursorSidebar.tsx` |
+| No motion on first paint: row animations (auto-animate) are off until a frame after the reveal, and the grouping-swap entrance only plays when `groupBy` changes. | `ListAnimationContext` and `data-grouping-entrance` in `src/ListReveal.tsx`, plus `src/list-reveal.css`; the context consumer in `src/AnimatedList.tsx`. Upstream's `className="cs-grouping-swap"` line is unchanged. |
 | No "Today +" projectless composer (BBP-50). Upstream `1c92916` hid it behind the first-group tools and left the path with no caller. We deleted it in upstream-owned lines: `onNewThread`/`personalProjectId`, `TreeContext.onNewThread`, the Today-only conditional and SectionDivider's button. Today's + is the New chat project picker. On a merge, keep the deletion unless upstream gives the path a caller again. | `src/CursorSidebar.tsx`, `src/ThreadTree.tsx`, `src/SectionDivider.tsx`; guard test `tests/ShelfList.test.tsx` |
 
 Keep the plugin id `cursor-sidebar`, because the plugin's database (`~/.bb/plugins/cursor-sidebar/data.db`) is keyed by it.
@@ -42,6 +42,19 @@ fork changes above, record the rollback commit, and validate the candidate
 there. Report conflicts, results, and engine/SDK compatibility to Warden.
 Follow the [Warden reload protocol (ADR-0001)](/Users/huntsyea/Dev/bb-plugins/docs/adr/0001-warden-reload-approval.md)
 for approval, fast-forward, deployment order, and runtime checks.
+
+**Merge check for the first-paint gate:** run `npm test`. `tests/ListReveal.test.tsx`
+covers the reveal when both stores load, the 600 ms bound, never hiding again,
+the entrance only after a `groupBy` change, and animation off until the frame
+after the reveal. It replaces the by-eye "readiness gate intact" check. By eye,
+confirm only that `CursorSidebar.tsx` still wraps the list in `<ListReveal>`,
+and that `AnimatedList` still reads `ListAnimationContext` (attach-time disable
+plus enable/disable effect).
+
+Upstream `main` `95ff67d` (untagged as of 2026-10-26) adds a `paused` prop to
+`AnimatedList` with its own disable and frame-later enable. When that lands,
+resolve the AnimatedList conflict by pausing when either `paused` or
+`!ListAnimationContext` holds. ListReveal already supplies the frame delay.
 
 ## v0.2.1 history correction (2026-10-18)
 

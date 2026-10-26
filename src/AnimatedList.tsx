@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useContext, useEffect, useRef, type ReactNode } from "react";
 import { autoAnimate } from "./vendor/auto-animate/index.mjs";
+import { ListAnimationContext } from "./ListReveal";
 
 /** Inbox Sidebar's list animation and timing, reused for every sibling list.
  * Derived from bb-plugin-thread-inbox (MIT); see THIRD-PARTY-NOTICES.md.
@@ -14,12 +15,6 @@ import { autoAnimate } from "./vendor/auto-animate/index.mjs";
  * tempo as the rows making room for it. */
 const MOVE_MS = 240;
 const MOVE_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
-
-/**
- * Whether lists may animate. The sidebar turns it off while its stored order
- * loads, so the first arrangement appears in place instead of sliding there.
- */
-export const ListAnimationContext = createContext(true);
 
 /** A list whose direct children slide when they are added, removed or
  * reordered. Only the immediate children of this node animate, so every list
@@ -37,15 +32,10 @@ export function AnimatedList({
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   const controller = useRef<ReturnType<typeof autoAnimate> | null>(null);
-  // auto-animate reacts to DOM mutations after the commit that made them, so
-  // re-enable a frame later: the commit that applied the order must not slide.
-  // Lists that mount enabled (the common case) schedule nothing.
-  const disabled = useRef(false);
+  // ListReveal already waits a frame past the reveal before enabling.
   useEffect(() => {
-    if (!enabled) { controller.current?.disable(); disabled.current = true; return; }
-    if (!disabled.current) return;
-    const frame = requestAnimationFrame(() => { controller.current?.enable(); disabled.current = false; });
-    return () => cancelAnimationFrame(frame);
+    if (enabled) controller.current?.enable();
+    else controller.current?.disable();
   }, [enabled]);
   const attach = useCallback((node: HTMLElement | null) => {
     controller.current?.destroy?.();
@@ -57,7 +47,7 @@ export function AnimatedList({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) return;
     controller.current = autoAnimate(node, { duration: MOVE_MS, easing: MOVE_EASING });
-    if (!enabledRef.current) { controller.current.disable(); disabled.current = true; }
+    if (!enabledRef.current) controller.current.disable();
   }, []);
   return <Tag ref={attach} className={className}>{children}</Tag>;
 }

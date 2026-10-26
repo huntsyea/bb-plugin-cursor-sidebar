@@ -1,0 +1,5 @@
+/* Fork-owned (FORK.md): the grouping-swap entrance is for changing groupBy.
+   ListReveal turns it on once groupBy differs from its value at the reveal. */
+[data-grouping-entrance="off"] .cs-grouping-swap {
+  animation: none;
+}
