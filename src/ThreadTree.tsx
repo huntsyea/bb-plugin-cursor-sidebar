@@ -64,8 +64,6 @@ export interface TreeContext {
   expandedParents: ReadonlySet<string>;
   expandedAgeGroups: ReadonlySet<string>;
   onToggleAgeGroup: (key: string) => void;
-  /** Opens BB's native new-thread composer with no project selected. */
-  onNewThread: () => void;
   rawById: ReadonlyMap<string, PluginSidebarThread>;
   workspacePaths: ReadonlyMap<string, string | null>;
   /** The host bb runs on; a row only names its host when it differs. */
@@ -581,11 +579,6 @@ export function ShelfList({
                 isDate
                   ? () => ctx.onToggleAgeGroup(collapseKey)
                   : () => ctx.onToggleGroup(collapseKey)
-              }
-              onNewThread={
-                group.label === "Today" && firstGroupTools === undefined
-                  ? ctx.onNewThread
-                  : undefined
               }
               shelfKey={collapseKey}
               tools={index === 0 ? firstGroupTools : undefined}

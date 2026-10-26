@@ -22,6 +22,7 @@ candidate still needs the approved runtime checks below.
 |---|---|
 | The list paints once, in its final order. It stays hidden (layout kept, `aria-busy`) until the stored project order and SidebarView have loaded, for at most 600 ms. | `src/useFirstLoad.ts`; a `loaded` flag in `src/useThreadOrders.ts`, `src/sidebar-view-controller.ts`, `src/useSidebarView.ts`, `src/sidebar-view.ts`; `src/CursorSidebar.tsx` |
 | No motion on first paint: row animations (auto-animate) are off until a frame after the stored order applies, and the grouping-swap entrance only plays when `groupBy` changes. | `ListAnimationContext` in `src/AnimatedList.tsx`; `src/CursorSidebar.tsx` |
+| No "Today +" projectless composer (BBP-50). Upstream `1c92916` hid it behind the first-group tools and left the path with no caller. We deleted it in upstream-owned lines: `onNewThread`/`personalProjectId`, `TreeContext.onNewThread`, the Today-only conditional and SectionDivider's button. Today's + is the New chat project picker. On a merge, keep the deletion unless upstream gives the path a caller again. | `src/CursorSidebar.tsx`, `src/ThreadTree.tsx`, `src/SectionDivider.tsx`; guard test `tests/ShelfList.test.tsx` |
 
 Keep the plugin id `cursor-sidebar`, because the plugin's database (`~/.bb/plugins/cursor-sidebar/data.db`) is keyed by it.
 
@@ -214,9 +215,10 @@ no automated interaction tests ran. Build manifests identify cursor-sidebar
 1. **Open:** click and keyboard-open a row; open a detached parent link.
    Cmd/Ctrl-click and menu Open in split must open or focus the correct pane.
    Check compact layout and sidebar dismissal through onNavigate.
-2. **New thread:** use Today +, a project header +, and the project picker.
-   Verify the intended personal/project selection, focused prompt, and default
-   unpinned placement outside folders, even after using a different project.
+2. **New thread:** use a project header +, and Today's + (the New chat project
+   picker, in the first-group tools). Verify the intended project selection,
+   focused prompt, and default unpinned placement outside folders, even after
+   using a different project. There is no projectless Today + (BBP-50).
 3. **Pin:** use hover, menu, and swipe to pin/unpin a single thread and a family.
    Pinning must lift the family root; unpinning must clear pinned descendants.
    Move a pinned family to a folder and check its unpin behavior. On a failed

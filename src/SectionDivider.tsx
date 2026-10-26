@@ -1,14 +1,12 @@
 import type { ReactNode } from "react";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
-import { ICON_BTN } from "./icon-btn";
 
 /** Distinguishes the two fixed thread sections from native project headings. */
-export function SectionDivider({ label, open, onToggle, onNewThread, shelfKey, tools }: {
+export function SectionDivider({ label, open, onToggle, shelfKey, tools }: {
   label: string;
   open: boolean;
   onToggle: () => void;
-  onNewThread?: () => void;
   shelfKey?: string;
   /** Trailing heading tools (the Filters menu on the first bucket heading). */
   tools?: ReactNode;
@@ -33,14 +31,6 @@ export function SectionDivider({ label, open, onToggle, onNewThread, shelfKey, t
           )}
         />
       </button>
-      {onNewThread ? (
-        <button
-          type="button"
-          aria-label={`New thread in ${label}`}
-          onClick={onNewThread}
-          className={cn(ICON_BTN, "opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100 max-md:opacity-100 pointer-coarse:opacity-100")}
-        ><Icon name="MessageSquarePlus" className="size-3.5" /></button>
-      ) : null}
       {tools}
     </div>
   );

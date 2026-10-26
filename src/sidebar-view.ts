@@ -681,7 +681,7 @@ export function groupOrdinaryRows(
 ): OrdinaryGroup[] {
   if (rows.length === 0) {
     // Today stays a standalone Updated group even with nothing in it, so the
-    // heading and its New thread affordance never vanish. Other empty date
+    // heading and the first-group tools it carries never vanish. Other empty date
     // buckets stay hidden. Non-Updated groupings render no empty groups.
     if (view.groupBy === "updated") {
       return [{ key: "updated:Today", label: "Today", rows: [] }];
@@ -735,7 +735,7 @@ export function groupOrdinaryRows(
   });
   if (view.groupBy === "updated" && !groups.has("updated:Today")) {
     // No family landed in Today: keep the standalone empty Today group at its
-    // canonical head so the heading and its New thread affordance stay put.
+    // canonical head so the heading and its first-group tools stay put.
     // Other empty date buckets stay hidden.
     sorted.unshift({ key: "updated:Today", label: "Today", canonical: AGE_GROUPS.indexOf("Today"), latestUpdatedAt: 0, rows: [] });
   }

@@ -164,22 +164,6 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
   const rpc = useRpc<typeof cursorSidebarRpcContract>();
   const projectIcons = useProjectIcons();
 
-  // "Today +" opens BB's native composer with the personal project selected —
-  // the projectless "Don't work in a project" mode. Naming it explicitly
-  // overrides the remembered root-compose project so a new thread never lands
-  // in whatever project was last used.
-  const personalProjectId = useMemo(
-    () => nativeProjects.find((project) => project.isPersonal)?.id ?? null,
-    [nativeProjects],
-  );
-  const onNewThread = useCallback(() => {
-    navigate.toCompose({
-      ...(personalProjectId === null ? {} : { projectId: personalProjectId }),
-      focusPrompt: true,
-    });
-    onNavigate();
-  }, [navigate, onNavigate, personalProjectId]);
-
   const nativeChatProjects = useMemo(
     () => nativeProjects.filter((project) => !project.isPersonal).map((project) => ({ id: project.id, name: project.name })),
     [nativeProjects],
@@ -931,7 +915,6 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
       expandedParents,
       expandedAgeGroups: expandedAges.ids,
       onToggleAgeGroup: expandedAges.toggle,
-      onNewThread,
       now,
       onNavigate,
       onToggleChildren: toggleChildren,
@@ -986,7 +969,6 @@ export function CursorSidebar({ activeThreadId, onNavigate }: PluginThreadListPr
       folderStore.sections,
       now,
       onNavigate,
-      onNewThread,
       onThreadDragStart,
       onThreadDragPickUp,
       onProjectDragPickUp,
